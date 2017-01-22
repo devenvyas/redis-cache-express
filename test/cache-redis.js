@@ -70,15 +70,15 @@ describe('calling cache_redis() ', function() {
     var agent = request(app);
     var url = '/test_url';
     var response = JSON.stringify({ "This is": "a JSON object" });
-
-    app.get(url, middleware, function(req, res) {
-      res.send(response);
-    });
     
     it('with URL as the key by default', function(done) {
       var cache_redis_res = cache_redis();
       var middleware = cache_redis_res.middleware;
       var redis_client = cache_redis_res.client;
+
+      app.get(url, middleware, function(req, res) {
+        res.send(response);
+      });
 
       agent.get(url)
       .end(function(err, res) {
@@ -89,7 +89,7 @@ describe('calling cache_redis() ', function() {
       })
     });
 
-    it.only('with a Key generated from callback when provided', function(done) {
+    it('with a Key generated from callback when provided', function(done) {
       var cache_redis_res = cache_redis();
       var middleware = cache_redis_res.middleware;
       var redis_client = cache_redis_res.client;
