@@ -113,4 +113,8 @@ describe('calling cache_redis() ', function() {
     it('refreshed when given `refresh value` in options is present in the URL');
   });
 
+  describe('when a cache is hit', function() {
+    it('the middleware should send and end the response');
+  });
+
 });
