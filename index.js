@@ -60,7 +60,6 @@ function cache_redis(options) {
   if(typeof(options.ttl) === 'undefined') {
     options.ttl = 0;
   }
-
   if(typeof(options.cache_key) === 'undefined' || typeof(options.cache_key) !== 'function') {
     options.cache_key = generate_cache_key;
   }
@@ -70,9 +69,9 @@ function cache_redis(options) {
     res.send = function(body) {
       if(redis_client.connected && typeof(body) === 'string') {
         if(!options.ttl)
-          redis_client.set(generate_cache_key(req), body);
+          redis_client.set(options.cache_key(req), body);
         else
-          redis_client.set(generate_cache_key(req), body, ex, options.ttl);
+          redis_client.set(options.cache_key(req), body, ex, options.ttl);
       }
       return _send.call(this, body);
     }

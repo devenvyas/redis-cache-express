@@ -89,14 +89,23 @@ describe('calling cache_redis() ', function() {
       })
     });
 
-    it('with a Key generated from callback when provided', function(done) {
-      var cache_redis_res = cache_redis();
+    it.only('with a Key generated from callback when provided', function(done) {
+      var cache_key = function(req) {
+        var prefix_value = '_cr_prefix';
+        return prefix_value + ':' + req.url;
+      };
+      var cache_redis_res = cache_redis({ cache_key: cache_key });
       var middleware = cache_redis_res.middleware;
       var redis_client = cache_redis_res.client;
+      var req = { url: url };
+
+      app.get(url, middleware, function(req, res) {
+        res.send(response);
+      });
 
       agent.get(url)
       .end(function(err, res) {
-        redis_client.get(url, function(err, reply) {
+        redis_client.get(cache_key(req), function(err, reply) {
           expect(reply).to.equal(response);
           done();
         })
