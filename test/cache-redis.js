@@ -103,7 +103,7 @@ describe('calling cache_redis() ', function() {
       });
     });
 
-    it('with a TTL of 0 by default');
+    it('without an expiry when no TTL has been set');
     it('with a TTL of given value as provided in options');
     it('only when the response has a status code of 200');
   });
