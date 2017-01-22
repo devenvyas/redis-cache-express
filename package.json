@@ -1,6 +1,6 @@
 {
   "name": "cache-redis",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "description": "Provides a seamless way to cache response data when using express",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,6 @@
     "chai": "^3.5.0",
     "eslint": "^3.13.1",
     "eslint-config-standard": "^6.2.1",
-    "eslint-plugin-promise": "^3.4.0",
     "eslint-plugin-standard": "^2.0.1",
     "express": "^4.14.0",
     "istanbul": "^0.4.5",
@@ -29,7 +28,7 @@
     "supertest": "^2.0.1"
   },
   "dependencies": {
-    "on-finished": "^2.3.0",
+    "debug": "^2.6.0",
     "redis": "^2.6.5"
   }
 }
