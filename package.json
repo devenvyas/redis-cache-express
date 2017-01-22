@@ -1,0 +1,35 @@
+{
+  "name": "cache-redis",
+  "version": "1.0.0",
+  "description": "Provides a seamless way to cache response data when using express",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint --plugin markdown --ext js,md .",
+    "test": "mocha --check-leaks --reporter spec --bail"
+  },
+  "keywords": [
+    "redis",
+    "cache",
+    "middleware"
+  ],
+  "author": "Deven Vyas <vyas.deven@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "eslint": "^3.13.1",
+    "eslint-config-standard": "^6.2.1",
+    "eslint-plugin-promise": "^3.4.0",
+    "eslint-plugin-standard": "^2.0.1",
+    "express": "^4.14.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0",
+    "mocha-sinon": "^1.1.6",
+    "proxyquire": "^1.7.10",
+    "sinon": "^1.17.7",
+    "supertest": "^2.0.1"
+  },
+  "dependencies": {
+    "on-finished": "^2.3.0",
+    "redis": "^2.6.5"
+  }
+}
