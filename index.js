@@ -66,17 +66,35 @@ function cache_redis(options) {
 
   function middleware(req, res, next) {
     var _send = res.send;
+
+    if(redis_client.connected) {
+      redis_client.get(options.cache_key(req), function(err, reply) {
+        if(!reply) {
+          next(); 
+          return;
+        }
+
+        res.set('X-APP-CACHE-KEY', options.cache_key(req));
+        res.send(reply);
+      })
+    }
+
     res.send = function(body) {
-      if(redis_client.connected && res.statusCode === 200 && typeof(body) === 'string') {
-        if(!options.ttl)
+      if(
+        typeof(res._headers['x-app-cache-key']) === 'undefined' 
+        && res.statusCode === 200 
+        && typeof(body) === 'string'
+        && redis_client.connected 
+      ) {
+        if(!options.ttl) {
           redis_client.set(options.cache_key(req), body);
-        else
+        }
+        else {
           redis_client.set(options.cache_key(req), body, 'ex', options.ttl);
+        }
       }
       return _send.call(this, body);
     }
-
-    next();
   }
 
   return {

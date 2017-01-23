@@ -170,13 +170,30 @@ describe('calling cache_redis() ', function() {
     });
   });
 
+  describe('when a cache is hit', function() {
+    it('the middleware should send and end the response', function(done) {
+      var cache_redis = init_middleware();
+      var redis_client = cache_redis.client;
+
+      agent.get(url)
+      .end(function(err, res) {
+        expect(res.headers['x-app-cache-key']).to.be.undefined;
+
+        agent.get(url)
+        .end(function(err, res) {
+          expect(res.headers['x-app-cache-key']).to.equal(url);
+          redis_client.quit();
+          done();
+        });
+      });
+
+    });
+  });
+
   describe('the cache should be', function() {
-    it('skipped when given `skip value` in options is present in the URL');
+    it('skipped when given `skip value` in options is present in the URL', function(done) {
+    });
+
     it('refreshed when given `refresh value` in options is present in the URL');
   });
-
-  describe('when a cache is hit', function() {
-    it('the middleware should send and end the response');
-  });
-
 });
