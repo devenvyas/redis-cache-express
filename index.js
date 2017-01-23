@@ -67,11 +67,11 @@ function cache_redis(options) {
   function middleware(req, res, next) {
     var _send = res.send;
     res.send = function(body) {
-      if(redis_client.connected && typeof(body) === 'string') {
+      if(redis_client.connected && res.statusCode === 200 && typeof(body) === 'string') {
         if(!options.ttl)
           redis_client.set(options.cache_key(req), body);
         else
-          redis_client.set(options.cache_key(req), body, ex, options.ttl);
+          redis_client.set(options.cache_key(req), body, 'ex', options.ttl);
       }
       return _send.call(this, body);
     }

@@ -15,8 +15,26 @@ var cache_redis = proxyquire('..', {
 });
 
 describe('calling cache_redis() ', function() {
+  var app = express();
+  var agent = request(app);
+  var url = '/test_url';
+  var response = JSON.stringify({ "This is": "a JSON object" });
+
+  var init_middleware = function init_middleware(options) {
+    var initialized = cache_redis(options);
+    app = express();
+    agent = request(app);
+    app.get(url, initialized.middleware, function(req, res) {
+      res.send(response);
+    });
+
+    return {
+      client: initialized.client,
+      middleware: initialized.middleware
+    }
+  };
+
   beforeEach(function(done) {
-    debug_stub.reset();
     var client = redis.createClient();
     client.on('connect', function() {
       client.flushdb(function(err, success) {
@@ -24,6 +42,7 @@ describe('calling cache_redis() ', function() {
         done();
       });
     });
+    debug_stub.reset();
   });
 
   describe('with a Redis client should', function() {
@@ -31,13 +50,14 @@ describe('calling cache_redis() ', function() {
       var redis_client = redis.createClient();
       var cache_redis_res = cache_redis({ client: redis_client });
       expect(cache_redis_res.middleware).to.be.a('function');
+      redis_client.quit();
     });
 
     it('print debug and return a basic middleware when an invalid Redis client is provided', function() {
-      var cache_redis_res = cache_redis({ client: {} });
+      var cache_redis = init_middleware({ client: {} });
       expect(debug_stub.calledOnce).to.be.true;
-      expect(cache_redis_res.middleware).to.be.a('function');
-      expect(cache_redis_res.client).to.be.undefined;
+      expect(cache_redis.middleware).to.be.a('function');
+      expect(cache_redis.client).to.be.undefined;
     });
   });
 
@@ -53,68 +73,101 @@ describe('calling cache_redis() ', function() {
     });
 
     it('on localhost when no connection values are provided', function() {
-      var cache_redis_res = cache_redis();
+      var redis_client = init_middleware().client;
       expect(redis.createClient.calledOnce).to.be.true;
-      cache_redis_res.client.quit();
+      redis_client.quit();
     });
 
     it('on given host when connection values are provided', function() {
-      var cache_redis_res = cache_redis({ port: 6379, host: 'localhost' });
+      var redis_client = init_middleware({ port: 6379, host: 'localhost' }).client;
       expect(redis.createClient.calledOnce).to.be.true;
-      cache_redis_res.client.quit();
+      redis_client.quit();
     });
   });
 
   describe('should cache the response', function() {
-    var app = express();
-    var agent = request(app);
-    var url = '/test_url';
-    var response = JSON.stringify({ "This is": "a JSON object" });
-    
     it('with URL as the key by default', function(done) {
-      var cache_redis_res = cache_redis();
-      var middleware = cache_redis_res.middleware;
-      var redis_client = cache_redis_res.client;
-
-      app.get(url, middleware, function(req, res) {
-        res.send(response);
-      });
-
+      var redis_client = init_middleware({}).client;
       agent.get(url)
       .end(function(err, res) {
         redis_client.get(url, function(err, reply) {
           expect(reply).to.equal(response);
+          redis_client.quit();
           done();
         })
       })
     });
 
-    it.only('with a Key generated from callback when provided', function(done) {
+    it('with a Key generated from callback when provided', function(done) {
       var cache_key = function(req) {
         var prefix_value = '_cr_prefix';
         return prefix_value + ':' + req.url;
       };
-      var cache_redis_res = cache_redis({ cache_key: cache_key });
-      var middleware = cache_redis_res.middleware;
-      var redis_client = cache_redis_res.client;
+      var redis_client = init_middleware({ cache_key: cache_key }).client;
       var req = { url: url };
-
-      app.get(url, middleware, function(req, res) {
-        res.send(response);
-      });
 
       agent.get(url)
       .end(function(err, res) {
         redis_client.get(cache_key(req), function(err, reply) {
           expect(reply).to.equal(response);
+          redis_client.quit();
           done();
         })
       });
     });
 
-    it('without an expiry when no TTL has been set');
-    it('with a TTL of given value as provided in options');
-    it('only when the response has a status code of 200');
+    it('without an expiry when no TTL has been set', function(done) {
+      var redis_client = init_middleware().client;
+      var req = { url: url };
+
+      agent.get(url)
+      .end(function(err, res) {
+        redis_client.get(url, function(err, reply) {
+          redis_client.pttl(url, function(err, reply) {
+            expect(reply).to.equal(-1);
+            redis_client.quit();
+            done();
+          })
+        })
+      });
+    });
+
+    it('with a TTL of given value as provided in options', function(done) {
+      var ttl = 1024440;
+      var redis_client = init_middleware({ ttl: ttl }).client;
+
+      agent.get(url)
+      .end(function(err, res) {
+        redis_client.get(url, function(err, reply) {
+          redis_client.pttl(url, function(err, reply) {
+            expect(Math.round(reply/1000)).to.equal(ttl);
+            redis_client.quit();
+            done();
+          })
+        })
+      });
+    });
+
+    it('only when the response has a status code of 200', function(done) {
+      var cache_redis = init_middleware();
+      var redis_client = cache_redis.client;
+
+      app = express();
+      app.get(url, cache_redis.middleware, function(req, res) {
+        res.status(404);
+        res.send('A piece of data');
+      })
+      agent = request(app);
+
+      agent.get(url)
+      .end(function(err, res) {
+        redis_client.get(url, function(err, reply) {
+          expect(reply).to.be.null;
+          redis_client.quit();
+          done();
+        })
+      });
+    });
   });
 
   describe('the cache should be', function() {
