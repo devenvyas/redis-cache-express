@@ -28,10 +28,7 @@ describe('calling cache_redis() ', function() {
       res.send(response);
     });
 
-    return {
-      client: initialized.client,
-      middleware: initialized.middleware
-    }
+    return initialized;
   };
 
   beforeEach(function(done) {
@@ -186,14 +183,56 @@ describe('calling cache_redis() ', function() {
           done();
         });
       });
-
     });
   });
 
   describe('the cache should be', function() {
-    it('skipped when given `skip value` in options is present in the URL', function(done) {
+    it('refreshed when given `refresh value` in options is present in the URL', function(done) {
+      var hash_value = Math.round(Math.random()*Math.pow(10, 10));
+      var refresh_key = 'refresh_cache';
+      var query_params = refresh_key + '=' + hash_value;
+      var options = {
+        refresh_cache: {
+          key: refresh_key,
+          value: hash_value
+        }
+      };
+      var cache_redis = init_middleware(options);
+      var cache_key = cache_redis.generate_cache_key({url: url}, options);
+      var redis_client = cache_redis.client;
+      var first_response = 'first_response';
+      var second_response = 'second_response';
+
+      app = express();
+      agent = request(app);
+      app.get(url, cache_redis.middleware, function(req, res) {
+        res.send(first_response);
+      });
+
+      agent.get(url)
+      .end(function(err, res) {
+        redis_client.get(cache_key, function(err, reply) {
+          expect(reply).to.equal(first_response);
+
+          var app2 = express();
+          var agent2 = request(app2);
+          app2.get(url, cache_redis.middleware, function(req, res) {
+            res.send(second_response);
+          });
+
+          agent2.get(url)
+          .query(query_params)
+          .end(function(err, res) {
+            console.log(res.text);
+            redis_client.get(cache_key, function(err, reply) {
+              expect(reply).to.equal(second_response);
+              done();
+            })
+          });
+
+        })
+      });
     });
 
-    it('refreshed when given `refresh value` in options is present in the URL');
   });
 });
