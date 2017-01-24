@@ -28,30 +28,36 @@ module.exports = cache_redis;
  */
 
 function cache_redis(options) {
-  var redis_client;
-  var generate_cache_key = function(req, options) {
+  options = options || {};
+
+  var create_key = function(req, options) {
     var url = req.url;
-    if(!!options.refresh_cache) {
-      url = url.replace(options.refresh_cache.key+'='+options.refresh_cache.value, '');
+    var invalidate = !!options.invalidate ? options.invalidate : false;
+
+    if(!!invalidate) {
+      url = url.replace(invalidate.param_key + '=' + invalidate.param_value, '');
     }
+
     url = url[url.length-1] == '?' ? url.substr(0, url.length-1) : url;
     return url;
   };
 
-  options = options || {};
+  var redis_client;
+  var redis_port = !!options.port ? options.port : 6379;
+  var redis_host = !!options.host ? options.host : 'localhost';
 
-  if(typeof(options.port) === 'undefined') {
-    options.port = 6379;
-  }
-
-  if(typeof(options.host) === 'undefined') {
-    options.host = 'localhost';
+  if(!!options.create_key || typeof(options.create_key) === 'function') {
+    create_key = options.create_key;
   }
 
   if(typeof(options.client) === 'undefined') {
-    redis_client = redis.createClient(options.port, options.host);
+    redis_client = redis.createClient(redis_port, redis_host);
+    debug('Connected to Redis on %s:%s', redis_port, redis_host);
+    redis_client.on('connect', function() {
+      debug('Connected to Redis on %s:%s', redis_port, redis_host);
+    })
     redis_client.on('error', function() {
-      debug('Unable to connect to Redis on %s:%s', options.port, options.host);
+      debug('Unable to connect to Redis on %s:%s', redis_port, redis_host);
     });
   }
   else if(typeof(options.client) !== 'object' || typeof(options.client.connected) !== 'boolean') {
@@ -62,19 +68,22 @@ function cache_redis(options) {
     redis_client = options.client;
   }
 
-  if(typeof(options.ttl) === 'undefined') {
-    options.ttl = 0;
-  }
-
-  if(typeof(options.cache_key) === 'undefined' || typeof(options.cache_key) !== 'function') {
-    options.cache_key = generate_cache_key;
-  }
-
   function middleware(req, res, next) {
     var _send = res.send;
-    var cache_key = options.cache_key(req, options)
-    var refresh_cache = options.refresh_cache;
-    var use_cache = !!refresh_cache && req.url.search(refresh_cache.key+'='+refresh_cache.value) > -1 ? false : true;
+    var cache_key = create_key(req, options)
+    var invalidate = options.invalidate;
+    var url = req.url;
+    var ttl = options.ttl;
+
+    var use_cache = function(url, invalidate) {
+      if(!redis_client.connected)
+        return false;
+
+      if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1)
+        return false;
+
+      return true;
+    }
 
     res.send = function(body) {
       if(
@@ -87,20 +96,20 @@ function cache_redis(options) {
           redis_client.set(cache_key, body);
         }
         else {
-          redis_client.set(cache_key, body, 'ex', options.ttl);
+          redis_client.set(cache_key, body, 'ex', ttl);
         }
       }
       return _send.call(this, body);
     }
 
-    if(use_cache && redis_client.connected) {
+    if(use_cache(url, invalidate)) {
       redis_client.get(cache_key, function(err, reply) {
         if(!reply) {
           next(); 
           return;
         }
 
-        res.set('X-APP-CACHE-KEY', cache_key);
+        res.set('x-app-cache-key', cache_key);
         res.send(reply);
       })
     }
@@ -111,6 +120,6 @@ function cache_redis(options) {
   return {
     client: redis_client,
     middleware: middleware,
-    generate_cache_key: generate_cache_key
+    create_key: create_key 
   }
 }

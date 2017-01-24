@@ -33,12 +33,18 @@ describe('calling cache_redis() ', function() {
 
   beforeEach(function(done) {
     var client = redis.createClient();
+
     client.on('connect', function() {
       client.flushdb(function(err, success) {
         client.quit();
         done();
       });
     });
+
+    client.on('error', function() {
+      console.log('TEST: Unable to connect to redis');
+    })
+
     debug_stub.reset();
   });
 
@@ -96,16 +102,16 @@ describe('calling cache_redis() ', function() {
     });
 
     it('with a Key generated from callback when provided', function(done) {
-      var cache_key = function(req) {
+      var create_key = function(req) {
         var prefix_value = '_cr_prefix';
         return prefix_value + ':' + req.url;
       };
-      var redis_client = init_middleware({ cache_key: cache_key }).client;
+      var redis_client = init_middleware({ create_key : create_key }).client;
       var req = { url: url };
 
       agent.get(url)
       .end(function(err, res) {
-        redis_client.get(cache_key(req), function(err, reply) {
+        redis_client.get(create_key(req), function(err, reply) {
           expect(reply).to.equal(response);
           redis_client.quit();
           done();
@@ -192,13 +198,13 @@ describe('calling cache_redis() ', function() {
       var refresh_key = 'refresh_cache';
       var query_params = refresh_key + '=' + hash_value;
       var options = {
-        refresh_cache: {
-          key: refresh_key,
-          value: hash_value
+        invalidate: {
+          param_key: refresh_key,
+          param_value: hash_value
         }
       };
       var cache_redis = init_middleware(options);
-      var cache_key = cache_redis.generate_cache_key({url: url}, options);
+      var cache_key = cache_redis.create_key({url: url}, options);
       var redis_client = cache_redis.client;
       var first_response = 'first_response';
       var second_response = 'second_response';
@@ -223,7 +229,6 @@ describe('calling cache_redis() ', function() {
           agent2.get(url)
           .query(query_params)
           .end(function(err, res) {
-            console.log(res.text);
             redis_client.get(cache_key, function(err, reply) {
               expect(reply).to.equal(second_response);
               done();
