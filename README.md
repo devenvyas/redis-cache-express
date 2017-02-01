@@ -58,8 +58,8 @@ app.get('/url_to_cache', function (req, res) {
 ```js
 
 /* 
-This will allow for a URL cache to be invalidated / refreshed when the following URL is hit:
-http://www.example-domain.com/url_to_cache?refresh_cache=8c8c279a7a98069d432271c8db9d7df2
+For a cached URL => http://www.example-domain.com/cached_path
+Purge it using   => http://www.example-domain.com/cached_path?refresh_cache=8c8c279a7a98069d432271c8db9d7df2
 */
 
 var hash_value = '8c8c279a7a98069d432271c8db9d7df2'
