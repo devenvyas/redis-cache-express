@@ -102,7 +102,9 @@ var options = { ttl: 86400 } /* Cache for 1 day */
 
 ### Enable cache invalidation via GET query params
 * Allows for easy invalidation of cache entries by appending a GET param to the concerned URL
-* E.g.: Invalidate cache for the URL => `https://www.url.com/path_to_cache` by hitting `https://www.url.com/path_to_cache?refresh_cache=true`
+* Example:
+    * Cached URL => `https://www.url.com/path_to_cache` 
+    * Can be invalidated by calling `https://www.url.com/path_to_cache?refresh_cache=true`
 ```js
 /* Usage */
 var options = { 
