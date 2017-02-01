@@ -1,5 +1,5 @@
 {
-  "name": "cache-redis",
+  "name": "redis-cache-express",
   "version": "1.0.0",
   "description": "Provides a seamless way to cache response data when using express",
   "main": "index.js",
