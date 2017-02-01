@@ -1,10 +1,9 @@
 {
   "name": "cache-redis",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "Provides a seamless way to cache response data when using express",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint --plugin markdown --ext js,md .",
     "test": "mocha --check-leaks --reporter spec --bail"
   },
   "keywords": [
