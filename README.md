@@ -14,6 +14,11 @@ Note:
 
 ### Initialize the middleware using a Redis client:
 ```js
+/*
+Scenario:
+- You have an already existing node-redis instance
+- Connected node-redis instance is passed to the cache-redis middleware
+*/
 
 var app = express()();
 var redis_cache = require('redis-express-cache');
@@ -21,7 +26,6 @@ var redis = require('redis');
 
 var client = redis.createClient();
 
-/* Pass in the initialized Redis client as an option param */
 var options = { client: redis_client };
 
 redis_cache = redis_cache(options);
@@ -36,16 +40,41 @@ app.listen(3000, function () {
 
 ```
 
-### Initialize the middleware without a Redis client:
+### Initialize the middleware without a Redis client [connection options are provided]:
 ```js
+
+/* 
+Scenario:
+- A connected Redis client is not provided
+- Connection options ( host and port ) are provided instead
+- Middleware will attempt a connection on provided connection params
+*/
+
+var app = express()();
+var redis_cache = require('redis-express-cache');
+var connection_options = { port: 6379, host: 'localhost' }
+
+redis_cache = redis_cache(connection_options);
+
+app.get('/url_to_cache', function (req, res) {
+  res.send('Will cache this response!')
+}, redis_cache)
+
+```
+
+### Initialize the middleware without a Redis client [connection options are not provided]:
+```js
+
+/* 
+Scenario:
+- A connected Redis client is not provided
+- Connection options ( host and port ) are not provided either
+- Middleware will attempt a connection to Redis on default values ( localhost : 6379 )
+*/
 
 var app = express()();
 var redis_cache = require('redis-express-cache');
 
-/* 
-- No options are passed here
-- Since no client has been passed, the cache middleware will make an attempt to connect to a local Redis client
-*/
 redis_cache = redis_cache();
 
 app.get('/url_to_cache', function (req, res) {
@@ -54,12 +83,14 @@ app.get('/url_to_cache', function (req, res) {
 
 ```
 
-### Allow for cache invalidation through URL:
+
+### Enable cache invalidation through URL query params:
 ```js
 
-/* 
-For a cached URL => http://www.example-domain.com/cached_path
-Purge it using   => http://www.example-domain.com/cached_path?refresh_cache=8c8c279a7a98069d432271c8db9d7df2
+/*
+Scenario:
+- For a cached URL : http://www.example-domain.com/cached_path
+- Purge it using   : http://www.example-domain.com/cached_path?refresh_cache=8c8c279a7a98069d432271c8db9d7df2
 */
 
 var hash_value = '8c8c279a7a98069d432271c8db9d7df2'
