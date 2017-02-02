@@ -28,7 +28,7 @@ var client = redis.createClient();
 
 var options = { client: redis_client };
 
-redis_cache = redis_cache(options);
+redis_cache = redis_cache(options).middleware;
 
 app.get('/url_to_cache', function (req, res) {
   res.send('Will cache this response!')
@@ -54,7 +54,7 @@ var app = express()();
 var redis_cache = require('redis-express-cache');
 var connection_options = { port: 6379, host: 'localhost' }
 
-redis_cache = redis_cache(connection_options);
+redis_cache = redis_cache(connection_options).middleware;
 
 app.get('/url_to_cache', function (req, res) {
   res.send('Will cache this response!')
@@ -73,9 +73,7 @@ Scenario:
 */
 
 var app = express()();
-var redis_cache = require('redis-express-cache');
-
-redis_cache = redis_cache();
+var redis_cache = require('redis-express-cache')().middleware;
 
 app.get('/url_to_cache', function (req, res) {
   res.send('Will cache this response!')
@@ -103,7 +101,7 @@ var options = {
   }
 }
 
-var redis_cache = redis_cache(options);
+var redis_cache = redis_cache(options).middleware;
 
 app.get('/url_to_cache', function (req, res) {
   res.send('Will cache this response!')
