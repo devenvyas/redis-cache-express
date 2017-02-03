@@ -203,6 +203,7 @@ describe('calling cache_redis() ', function() {
           param_value: hash_value
         }
       };
+
       var cache_redis = init_middleware(options);
       var cache_key = cache_redis.create_key({url: url}, options);
       var redis_client = cache_redis.client;

@@ -21,7 +21,7 @@ var extend = require('extend');
 module.exports = cache_redis;
 
 /**
- * Cache response data in Redis
+ * Cache response data in Redis and reply with the same on cache hit
  * @param {Object} [options]
  * @return {Function} middleware
  * @public
@@ -53,9 +53,11 @@ function cache_redis(options) {
   if(typeof(options.client) === 'undefined') {
     redis_client = redis.createClient(redis_port, redis_host);
     debug('Connected to Redis on %s:%s', redis_port, redis_host);
+
     redis_client.on('connect', function() {
       debug('Connected to Redis on %s:%s', redis_port, redis_host);
-    })
+    });
+
     redis_client.on('error', function() {
       debug('Unable to connect to Redis on %s:%s', redis_port, redis_host);
     });
