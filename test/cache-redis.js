@@ -11,7 +11,7 @@ var cache_redis = proxyquire('..', {
   'debug': function() {
     return debug_stub;
   },
-  'redis': redis 
+  'redis': redis
 });
 
 describe('calling cache_redis() ', function() {
@@ -94,6 +94,18 @@ describe('calling cache_redis() ', function() {
       agent.get(url)
       .end(function(err, res) {
         redis_client.get(url, function(err, reply) {
+          expect(reply).to.equal(response);
+          redis_client.quit();
+          done();
+        })
+      })
+    });
+
+    it('with a key include url with host when include_host is enabled', function(done) {
+      var redis_client = init_middleware({ include_host: true }).client;
+      agent.get(url)
+      .end(function(err, res) {
+        redis_client.get(res.req._headers.host + url, function(err, reply) {
           expect(reply).to.equal(response);
           redis_client.quit();
           done();

@@ -29,6 +29,7 @@ module.exports = cache_redis;
 
 function cache_redis(options) {
   options = options || {};
+  options.include_host = !!options.include_host ? options.include_host : false;
 
   var create_key = function(req, options) {
     var url = req.url;
@@ -39,6 +40,10 @@ function cache_redis(options) {
     }
 
     url = url[url.length-1] == '?' ? url.substr(0, url.length-1) : url;
+
+    if(options.include_host)
+      url = req.get('host') + url;
+
     return url;
   };
 
@@ -89,10 +94,10 @@ function cache_redis(options) {
 
     res.send = function(body) {
       if(
-        typeof(res._headers['x-app-cache-key']) === 'undefined' 
-        && res.statusCode === 200 
+        typeof(res._headers['x-app-cache-key']) === 'undefined'
+        && res.statusCode === 200
         && typeof(body) === 'string'
-        && redis_client.connected 
+        && redis_client.connected
       ) {
         if(!options.ttl) {
           redis_client.set(cache_key, body);
@@ -107,7 +112,7 @@ function cache_redis(options) {
     if(use_cache(url, invalidate)) {
       redis_client.get(cache_key, function(err, reply) {
         if(!reply) {
-          next(); 
+          next();
           return;
         }
 
@@ -122,6 +127,6 @@ function cache_redis(options) {
   return {
     client: redis_client,
     middleware: middleware,
-    create_key: create_key 
+    create_key: create_key
   }
 }
