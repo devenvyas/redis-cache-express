@@ -105,7 +105,8 @@ describe('calling cache_redis() ', function() {
       var redis_client = init_middleware({ include_host: true }).client;
       agent.get(url)
       .end(function(err, res) {
-        redis_client.get(res.req._headers.host + url, function(err, reply) {
+        var cache_key = res.req._headers.host.split(':')[0] + url;
+        redis_client.get(cache_key, function(err, reply) {
           expect(reply).to.equal(response);
           redis_client.quit();
           done();

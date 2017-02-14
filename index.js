@@ -42,7 +42,7 @@ function cache_redis(options) {
     url = url[url.length-1] == '?' ? url.substr(0, url.length-1) : url;
 
     if(options.include_host)
-      url = req.get('host') + url;
+      url = req.hostname + url;
 
     return url;
   };
