@@ -2,7 +2,7 @@
 
 This library implements an Express middleware that allows for caching of HTML / JSON web responses using a Redis store.
 
-Note: 
+Note:
 * This library has a hard-dependency on the [Node Redis](https://github.com/NodeRedis/node_redis) NPM package_
 * This middleware will only cache requests that return a `200` HTTP status code
 
@@ -43,7 +43,7 @@ app.listen(3000, function () {
 ### Initialize the middleware without a Redis client [connection options are provided]:
 ```js
 
-/* 
+/*
 Scenario:
 - A connected Redis client is not provided
 - Connection options ( host and port ) are provided instead
@@ -65,7 +65,7 @@ app.get('/url_to_cache', function (req, res) {
 ### Initialize the middleware without a Redis client [connection options are not provided]:
 ```js
 
-/* 
+/*
 Scenario:
 - A connected Redis client is not provided
 - Connection options ( host and port ) are not provided either
@@ -115,7 +115,7 @@ app.get('/url_to_cache', function (req, res) {
 * Pass in a Redis client that the middleware can use as a cache store
 * When present, the provided `client` will be used
 * When absent, the middleware will attempt a connection to a client on localhost
-```js 
+```js
 /* Usage */
 var options = { client: redis.createClient() }
 ```
@@ -129,14 +129,23 @@ var options = { client: redis.createClient() }
 var options = { ttl: 86400 } /* Cache for 1 day */
 ```
 
+### Include host
+* Enables usage of cache keys that include `host` + `url path` instead of just the `url path (default)`
+* When disabled a cache key will consist only of the url => `/some/random/path`
+* When enabled a cache key will include the host as well => `www.some-domain.com/some/random/path`
+```js
+/* Usage */
+var options = { include_host: true } /* Cache for 1 day */
+```
+
 ### Enable cache invalidation via GET query params
 * Allows for easy invalidation of cache entries by appending a GET param to the concerned URL
 * Example:
-    * Cached URL => `https://www.url.com/path_to_cache` 
+    * Cached URL => `https://www.url.com/path_to_cache`
     * Can be invalidated by calling `https://www.url.com/path_to_cache?refresh_cache=true`
 ```js
 /* Usage */
-var options = { 
+var options = {
   invalidate: {
     param_key: 'refresh_cache',
     param_value: 'true'
