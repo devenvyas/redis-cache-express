@@ -13,7 +13,6 @@
 var debug = require('debug')('cache-redis');
 var accepts = require('accepts');
 var redis = require('redis');
-var extend = require('extend');
 
 /**
  * Module exports
