@@ -11,6 +11,7 @@
  */
 
 var debug = require('debug')('cache-redis');
+var accepts = require('accepts');
 var redis = require('redis');
 var extend = require('extend');
 
@@ -114,6 +115,10 @@ function cache_redis(options) {
         if(!reply) {
           next();
           return;
+        }
+
+        if(accepts(req).type(['json'])) {
+          res.set('Content-Type', 'applicaton/json');
         }
 
         res.set('x-app-cache-key', cache_key);
