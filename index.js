@@ -38,9 +38,8 @@ function cache_redis(options) {
 
     if(!!invalidate) {
       url = url.replace(invalidate.param_key + '=' + invalidate.param_value, '');
+      url = url.replace(/(\&|\?)$/, '');
     }
-
-    url = url[url.length-1] == '?' ? url.substr(0, url.length-1) : url;
 
     if(options.include_host)
       url = req.hostname + url;
@@ -83,17 +82,18 @@ function cache_redis(options) {
     var url = req.url;
     var ttl = options.ttl;
 
-    var use_cache = function(url, invalidate) {
-      if(!redis_client.connected)
-        return false;
+    var invalidate_cache = function(url, invalidate) {
+      if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1) {
+        redis_client.DEL(cache_key);
+        return true;
+      }
 
-      if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1)
-        return false;
-
-      return true;
+      return false;
     }
 
     res.send = function(body) {
+      _send.call(this, body);
+
       if(
         typeof(res._headers['x-app-cache-key']) === 'undefined'
         && res.statusCode === 200
@@ -107,10 +107,11 @@ function cache_redis(options) {
           redis_client.set(cache_key, body, 'ex', ttl);
         }
       }
-      return _send.call(this, body);
+
+      return;
     }
 
-    if(use_cache(url, invalidate)) {
+    if(redis_client.connected && !invalidate_cache(url, invalidate)) {
       redis_client.get(cache_key, function(err, reply) {
         if(!reply) {
           next();
