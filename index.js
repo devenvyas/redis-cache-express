@@ -30,6 +30,7 @@ module.exports = cache_redis;
 function cache_redis(options) {
   options = options || {};
   options.include_host = !!options.include_host ? options.include_host : false;
+  options.transform = options.transform || {};
 
   var create_key = function(req, options) {
     var url = req.url;
@@ -43,6 +44,10 @@ function cache_redis(options) {
     if(options.include_host)
       url = req.hostname + url;
 
+    if(!!options.transform.cache_key || typeof(options.transform.cache_key) === 'function') {
+      url = options.transform.cache_key(url);
+    }
+
     return url;
   };
 
@@ -50,9 +55,6 @@ function cache_redis(options) {
   var redis_port = !!options.port ? options.port : 6379;
   var redis_host = !!options.host ? options.host : 'localhost';
 
-  if(!!options.create_key || typeof(options.create_key) === 'function') {
-    create_key = options.create_key;
-  }
 
   if(typeof(options.client) === 'undefined') {
     redis_client = redis.createClient(redis_port, redis_host);
@@ -74,64 +76,88 @@ function cache_redis(options) {
     redis_client = options.client;
   }
 
-  function middleware(req, res, next) {
-    var _send = res.send;
-    var cache_key = create_key(req, options)
-    var invalidate = options.invalidate;
-    var url = req.url;
-    var ttl = options.ttl;
-
-    var invalidate_cache = function(url, invalidate) {
-      if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1) {
-        redis_client.DEL(cache_key);
-        return true;
+  function with_options(opts) {
+    return function middleware(req, res, next) {
+      if(opts) {
+        options = Object.assign(options, opts);
       }
 
-      return false;
-    }
+      var _send = res.send;
+      var cache_key = create_key(req, options);
+      var invalidate = options.invalidate;
+      var url = req.url;
+      var ttl = options.ttl;
 
-    res.send = function(body) {
-      _send.call(this, body);
+      var invalidate_cache = function(url, invalidate) {
+        if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1) {
+          redis_client.DEL(cache_key);
+          return true;
+        }
 
-      if(
-        typeof(res._headers['x-app-cache-key']) === 'undefined'
-        && res.statusCode === 200
-        && typeof(body) === 'string'
-        && redis_client.connected
-      ) {
-        if(!options.ttl) {
-          redis_client.set(cache_key, body);
-        }
-        else {
-          redis_client.set(cache_key, body, 'ex', ttl);
-        }
+        return false;
       }
 
-      return;
-    }
+      res.send = function(body) {
+        _send.call(this, body);
 
-    if(redis_client.connected && !invalidate_cache(url, invalidate)) {
-      redis_client.get(cache_key, function(err, reply) {
-        if(!reply) {
-          next();
-          return;
+        if(
+          typeof(res._headers['x-app-cache-key']) === 'undefined'
+          && res.statusCode === 200
+          && typeof(body) === 'string'
+          && redis_client.connected
+        ) {
+          if(options.transform.body && typeof(options.transform.body) === 'function') {
+            body = options.transform.body(body);
+            if(typeof(body) !== 'string') {
+              debug('Transform did not return a string, skipping SET');
+              return;
+            }
+          }
+
+          if(!options.ttl) {
+            redis_client.set(cache_key, body);
+          }
+          else {
+            redis_client.set(cache_key, body, 'ex', ttl);
+          }
         }
 
-        if(accepts(req).type(['json'])) {
-          res.set('Content-Type', 'applicaton/json');
-        }
+        return;
+      }
 
-        res.set('x-app-cache-key', cache_key);
-        res.send(reply);
-      })
+      if(redis_client.connected && !invalidate_cache(url, invalidate)) {
+        redis_client.get(cache_key, function(err, reply) {
+          if(!reply) {
+            next();
+            return;
+          }
+
+          res.set('x-app-cache-key', cache_key);
+
+          if(accepts(req).type(['json'])) {
+            res.set('Content-Type', 'applicaton/json');
+          }
+
+          if(options.send === false) {
+            res.body = reply;
+            next();
+            return;
+          }
+
+          res.send(reply);
+        })
+      }
+      else {
+        next();
+        return;
+      }
     }
-    else
-      next();
   }
 
   return {
     client: redis_client,
-    middleware: middleware,
+    middleware: with_options({}),
+    with_options: with_options,
     create_key: create_key
   }
 }
