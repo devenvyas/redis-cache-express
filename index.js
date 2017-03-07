@@ -138,7 +138,7 @@ function cache_redis(options) {
             res.set('Content-Type', 'applicaton/json');
           }
 
-          if(options.send === false) {
+          if(typeof(options.send) !== 'undefined' && options.send === false) {
             res.body = reply;
             next();
             return;
