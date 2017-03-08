@@ -145,6 +145,7 @@ function cache_redis(options) {
           }
 
           res.send(reply);
+          return;
         })
       }
       else {
