@@ -74,19 +74,22 @@ function cache_redis(options) {
   }
   else {
     redis_client = options.client;
+    delete options.client;
   }
 
   function with_options(opts) {
     return function middleware(req, res, next) {
+      var _options = Object.assign({}, options);
+
       if(opts) {
-        options = Object.assign(options, opts);
+        _options = Object.assign(_options, opts);
       }
 
       var _send = res.send;
-      var cache_key = create_key(req, options);
-      var invalidate = options.invalidate;
+      var cache_key = create_key(req, _options);
+      var invalidate = _options.invalidate;
       var url = req.url;
-      var ttl = options.ttl;
+      var ttl = _options.ttl;
 
       var invalidate_cache = function(url, invalidate) {
         if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1) {
@@ -106,15 +109,15 @@ function cache_redis(options) {
           && typeof(body) === 'string'
           && redis_client.connected
         ) {
-          if(options.transform.body && typeof(options.transform.body) === 'function') {
-            body = options.transform.body(body);
+          if(_options.transform.body && typeof(_options.transform.body) === 'function') {
+            body = _options.transform.body(body);
             if(typeof(body) !== 'string') {
               debug('Transform did not return a string, skipping SET');
               return;
             }
           }
 
-          if(!options.ttl) {
+          if(!_options.ttl) {
             redis_client.set(cache_key, body);
           }
           else {
@@ -138,7 +141,7 @@ function cache_redis(options) {
             res.set('Content-Type', 'applicaton/json');
           }
 
-          if(typeof(options.send) !== 'undefined' && options.send === false) {
+          if(typeof(_options.send) !== 'undefined' && _options.send === false) {
             res.body = reply;
             next();
             return;
