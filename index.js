@@ -45,7 +45,7 @@ function cache_redis(options) {
       url = req.hostname + url;
 
     if(!!options.transform.cache_key || typeof(options.transform.cache_key) === 'function') {
-      url = options.transform.cache_key(url);
+      url = options.transform.cache_key(url, req);
     }
 
     return url;
