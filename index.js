@@ -137,8 +137,16 @@ function cache_redis(options) {
 
           res.set('x-app-cache-key', cache_key);
 
-          if(accepts(req).type(['json'])) {
-            res.set('Content-Type', 'applicaton/json');
+          switch(accepts(req).type(['html', 'json'])) {
+            case 'json':
+              res.set('Content-Type', 'applicaton/json');
+              break
+            case 'html':
+              res.setHeader('Content-Type', 'text/html')
+              break
+            default:
+              res.setHeader('Content-Type', 'text/html')
+              break
           }
 
           if(typeof(_options.send) !== 'undefined' && _options.send === false) {
