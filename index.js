@@ -31,6 +31,7 @@ function cache_redis(options) {
   options = options || {};
   options.include_host = !!options.include_host ? options.include_host : false;
   options.transform = options.transform || {};
+  options.filter = function() { return false; }
 
   var create_key = function(req, options) {
     var url = req.url;
@@ -89,6 +90,7 @@ function cache_redis(options) {
       var cache_key = create_key(req, _options);
       var invalidate = _options.invalidate;
       var url = req.url;
+      var headers = req.headers;
       var ttl = _options.ttl;
 
       var invalidate_cache = function(url, invalidate) {
@@ -108,6 +110,7 @@ function cache_redis(options) {
           && res.statusCode === 200
           && typeof(body) === 'string'
           && redis_client.connected
+          && !_options.filter(url, headers)
         ) {
           if(_options.transform.body && typeof(_options.transform.body) === 'function') {
             body = _options.transform.body(body);
@@ -128,7 +131,7 @@ function cache_redis(options) {
         return;
       }
 
-      if(redis_client.connected && !invalidate_cache(url, invalidate)) {
+      if(!_options.filter(url, headers) && redis_client.connected && !invalidate_cache(url, invalidate)) {
         redis_client.get(cache_key, function(err, reply) {
           if(!reply) {
             next();
