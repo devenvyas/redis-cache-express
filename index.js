@@ -142,7 +142,7 @@ function cache_redis(options) {
 
           switch(accepts(req).type(['html', 'json'])) {
             case 'json':
-              res.set('Content-Type', 'applicaton/json');
+              res.setHeader('Content-Type', 'application/json');
               break
             case 'html':
               res.setHeader('Content-Type', 'text/html')
