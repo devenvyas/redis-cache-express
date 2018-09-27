@@ -1,6 +1,6 @@
 {
   "name": "redis-cache-express",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Provides a seamless way to cache response data when using express",
   "main": "index.js",
   "repository": "devenvyas/redis-cache-express",
