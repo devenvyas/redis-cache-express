@@ -13,6 +13,7 @@
 var debug = require('debug')('cache-redis');
 var accepts = require('accepts');
 var redis = require('redis');
+var zlib = require('zlib');
 
 /**
  * Module exports
@@ -32,6 +33,7 @@ function cache_redis(options) {
   options.include_host = !!options.include_host ? options.include_host : false;
   options.transform = options.transform || {};
   options.filter = function() { return false; }
+  options.perf_timer = !!options.perf_timer ? options.perf_timer : () => {};
 
   var create_key = function(req, options) {
     var url = req.url;
@@ -91,7 +93,8 @@ function cache_redis(options) {
       var invalidate = _options.invalidate;
       var url = req.url;
       var headers = req.headers;
-      var ttl = _options.ttl;
+      var ttl = _options.ttl || 3600;
+      var compress = _options.compress || false;
 
       var invalidate_cache = function(url, invalidate) {
         if(!!invalidate && url.search(invalidate.param_key+'='+invalidate.param_value) > -1) {
@@ -100,6 +103,10 @@ function cache_redis(options) {
         }
 
         return false;
+      }
+
+      if(compress) {
+        cache_key = cache_key + ':compress'
       }
 
       res.send = function(body) {
@@ -120,12 +127,23 @@ function cache_redis(options) {
             }
           }
 
-          if(!_options.ttl) {
-            redis_client.set(cache_key, body);
+          if(compress) {
+            let timerStart = process.hrtime();
+            zlib.deflate(body, function (err, compressed_body) {
+              let timerEnd = process.hrtime(timerStart);
+              options.perf_timer('cache_deflate_time', timerEnd);
+              if (err) {
+                console.log('Error deflating!', err);
+                return;
+              }
+
+              redis_client.set(cache_key, compressed_body.toString('base64'), 'ex', ttl);
+            });
           }
           else {
             redis_client.set(cache_key, body, 'ex', ttl);
           }
+
         }
 
         return;
@@ -152,13 +170,35 @@ function cache_redis(options) {
               break
           }
 
-          if(typeof(_options.send) !== 'undefined' && _options.send === false) {
-            res.body = reply;
-            next();
-            return;
-          }
+          var compressionPromise = new Promise((resolve, reject) => {
+            if(compress) {
+              let timerStart = process.hrtime();
+              zlib.inflate(new Buffer(reply, 'base64'), (err, response) => {
+                let timerEnd = process.hrtime(timerStart);
+                options.perf_timer('cache_inflate_time', timerEnd);
+                if (err) {
+                  console.log('Error inflating!', err);
+                  return;
+                }
 
-          res.send(reply);
+                resolve(response)
+              });
+            }
+            else {
+              resolve(reply)
+            }
+
+          })
+
+          compressionPromise.then((response) => {
+            if(typeof(_options.send) !== 'undefined' && _options.send === false) {
+              res.body = response;
+              next();
+              return;
+            }
+            res.send(response);
+          })
+
           return;
         })
       }
