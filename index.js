@@ -38,10 +38,10 @@ function cache_redis(options) {
   var create_key = function(req, options) {
     var url = req.url;
     var invalidate = !!options.invalidate ? options.invalidate : false;
+    var rx = new RegExp('[?&]?' + invalidate.param_key + '=' + invalidate.param_value);
 
     if(!!invalidate) {
-      url = url.replace(invalidate.param_key + '=' + invalidate.param_value, '');
-      url = url.replace(/(\&|\?)$/, '');
+      url = url.replace(rx, '');
     }
 
     if(options.include_host)
