@@ -126,7 +126,9 @@ function cache_redis(options) {
               return;
             }
           }
-
+          if(_options.with_locals) {
+            body = res.locals[_options.locals_key];
+          }
           if(compress) {
             let timerStart = process.hrtime();
             zlib.deflate(body, function (err, compressed_body) {
@@ -193,6 +195,11 @@ function cache_redis(options) {
           compressionPromise.then((response) => {
             if(typeof(_options.send) !== 'undefined' && _options.send === false) {
               res.body = response;
+              next();
+              return;
+            }
+            if (_options.with_locals) {
+              res.locals[_options.locals_key] = response;
               next();
               return;
             }
