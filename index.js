@@ -82,6 +82,9 @@ function cache_redis(options) {
 
   function with_options(opts) {
     return function middleware(req, res, next) {
+      res._redis_cache_express_state = {
+        served_from_cache: false
+      };
       var _options = Object.assign({}, options);
 
       if(opts) {
@@ -110,10 +113,10 @@ function cache_redis(options) {
       }
 
       res.send = function(body) {
+        res.set('x-app-cache-key', cache_key);
         _send.call(this, body);
 
-        if(
-          typeof(res._headers['x-app-cache-key']) === 'undefined'
+        if(!res._redis_cache_express_state.served_from_cache
           && res.statusCode === 200
           && typeof(body) === 'string'
           && redis_client.connected
@@ -155,8 +158,7 @@ function cache_redis(options) {
             next();
             return;
           }
-
-          res.set('x-app-cache-key', cache_key);
+          res._redis_cache_express_state.served_from_cache = true;
 
           switch(accepts(req).type(['html', 'json'])) {
             case 'json':
